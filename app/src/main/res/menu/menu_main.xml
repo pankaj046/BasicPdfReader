@@ -1,0 +1,14 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_pdf"
+        android:icon="@drawable/ic_pdf"
+        android:title="@string/pdf"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_link_pdf"
+        android:icon="@drawable/ic_add_link_24"
+        android:title="@string/pdf"
+        app:showAsAction="always" />
+</menu>

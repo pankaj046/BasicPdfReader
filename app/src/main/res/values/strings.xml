@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Pdf Reader</string>
+    <string name="pick_pdf">Pick Pdf</string>
+    <string name="pdf">pdf</string>
+</resources>
