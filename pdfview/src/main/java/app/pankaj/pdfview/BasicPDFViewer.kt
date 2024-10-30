@@ -49,67 +49,79 @@ class BasicPDFViewer @JvmOverloads constructor(
     }
 
     fun loadPdf(file: Uri) {
-        progressBar?.let { visibility = View.VISIBLE }
+        progressBar?.visibility = View.VISIBLE
         pdfFile = getTempFile(file)
+        if (pdfFile == null || pdfFile?.exists() != true) {
+            Log.e(TAG, "PDF file is null or doesn't exist")
+            progressBar?.visibility = View.GONE
+            return
+        }
+
         try {
             val fileDescriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
             pdfRenderer = PdfRenderer(fileDescriptor)
             pageCount = pdfRenderer.pageCount
             adapter = PdfAdapter()
             scrollToPosition(0)
-            progressBar?.let { visibility = View.GONE }
         } catch (e: IOException) {
             e.printStackTrace()
-            progressBar?.let { visibility = View.GONE }
+            Log.e(TAG, "loadPdf: IOException occurred while loading PDF", e)
+        } finally {
+            progressBar?.visibility = View.GONE
         }
     }
 
-    fun loadPdf(url: String) {
+    fun loadPdf(httpUrl: String) {
         progressBar?.visibility = View.VISIBLE
 
         CoroutineScope(Dispatchers.Main).launch {
             try {
                 val deferredPdfFile = async(Dispatchers.IO) {
-                    getPdfFile?.downloadPdf(url)
+                    getPdfFile?.downloadPdf(httpUrl)
                 }
                 val pdfFile = deferredPdfFile.await()
                 if (pdfFile == null || !pdfFile.exists()) {
-                    Log.e("PDFDebug", "PDF file is null or doesn't exist")
+                    Log.e(TAG, "Downloaded PDF file is null or doesn't exist")
+                    progressBar?.visibility = View.GONE
                     return@launch
                 }
+
                 val fileDescriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
                 pdfRenderer = PdfRenderer(fileDescriptor)
                 pageCount = pdfRenderer.pageCount
                 adapter = PdfAdapter()
                 scrollToPosition(0)
-
             } catch (e: IOException) {
                 e.printStackTrace()
-                Log.e(TAG, "loadPdf: "+e.printStackTrace())
+                Log.e(TAG, "loadPdf: IOException occurred while loading PDF from URL", e)
             } finally {
                 progressBar?.visibility = View.GONE
             }
         }
     }
 
-
-
     fun loadPdf(file: File) {
-        progressBar?.let { visibility = View.VISIBLE }
+        progressBar?.visibility = View.VISIBLE
         pdfFile = file
+        if (!pdfFile!!.exists()) {
+            Log.e(TAG, "PDF file does not exist")
+            progressBar?.visibility = View.GONE
+            return
+        }
+
         try {
             val fileDescriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
             pdfRenderer = PdfRenderer(fileDescriptor)
             pageCount = pdfRenderer.pageCount
             adapter = PdfAdapter()
             scrollToPosition(0)
-            progressBar?.let { visibility = View.GONE }
         } catch (e: IOException) {
             e.printStackTrace()
+            Log.e(TAG, "loadPdf: IOException occurred while loading PDF from File", e)
+        } finally {
             progressBar?.visibility = View.GONE
         }
     }
-
 
     inner class PdfAdapter : Adapter<PdfViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PdfViewHolder {
@@ -140,7 +152,6 @@ class BasicPDFViewer @JvmOverloads constructor(
         }
     }
 
-
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         if (::pdfRenderer.isInitialized) {
@@ -148,13 +159,18 @@ class BasicPDFViewer @JvmOverloads constructor(
         }
     }
 
-    private fun getTempFile(file: Uri): File{
-        val tempFile = File.createTempFile("temp", ".pdf", context.cacheDir)
-        context.contentResolver.openInputStream(file)?.use { inputStream ->
-            tempFile.outputStream().use { outputStream ->
-                inputStream.copyTo(outputStream)
+    private fun getTempFile(file: Uri): File? {
+        return try {
+            val tempFile = File.createTempFile("temp", ".pdf", context.cacheDir)
+            context.contentResolver.openInputStream(file)?.use { inputStream ->
+                tempFile.outputStream().use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
             }
+            tempFile
+        } catch (e: IOException) {
+            Log.e(TAG, "getTempFile: IOException occurred while creating temp file", e)
+            null
         }
-        return tempFile
     }
 }
